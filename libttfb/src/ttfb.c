@@ -1,3 +1,4 @@
+#include <json_tokener.h>
 #include <json_types.h>
 #include <linkhash.h>
 #include <ttfb/ttfb.h>
@@ -17,8 +18,8 @@
 size_t
 WRITEFUNCTION_callback(void* ptr, size_t size, size_t nmemb, void* s)
 {
-    printbuf* buf = s;
-    printbuf_memappend_fast(buf, ptr, size * nmemb);
+    printbuf* const buf = s;
+    printbuf_memappend_fast(buf, ptr, (ssize_t)(size * nmemb));
     return size * nmemb;
 }
 
@@ -53,7 +54,7 @@ make_url_from_branch(const ttfb_branch branch)
             "add char* mapping for it. Enable warnings! Stupid.");
         goto error_cleanup;
     }
-    printbuf_memappend_fast(buf, branch_cstr, strlen(branch_cstr));
+    printbuf_memappend_fast(buf, branch_cstr, (ssize_t)strlen(branch_cstr));
 
     goto cleanup;
 
@@ -71,10 +72,10 @@ is_error_response_code(const uint code)
     return code >= 400 || code < 100 ? 1 : 0;
 }
 
-printbuf*
+printbuf const*
 make_GET_request(char const* const url)
 {
-    CURL* curl = curl_easy_init();
+    CURL* const curl = curl_easy_init();
     if (NULL == curl)
     {
         LOG("error in curl_easy_init()");
@@ -83,7 +84,7 @@ make_GET_request(char const* const url)
 
     curl_easy_setopt(curl, CURLOPT_URL, url);
 
-    printbuf* data = printbuf_new();
+    printbuf* const data = printbuf_new();
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, data);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WRITEFUNCTION_callback);
 
@@ -94,11 +95,11 @@ make_GET_request(char const* const url)
         goto error_cleanup;
     }
 
-    uint status_code = 0;
+    long status_code = 0;
     curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &status_code);
     if (is_error_response_code(status_code))
     {
-        LOG("Client or server error. Response status code: %d\n"
+        LOG("Client or server error. Response status code: %ld\n"
             "Response data: %s",
             status_code,
             data->buf);
@@ -119,35 +120,37 @@ cleanup:
 json_object*
 ttfb_get_binary_packages(const ttfb_branch branch)
 {
-    printbuf* url = make_url_from_branch(branch);
+    json_object* ret = NULL;
+
+    printbuf const* const url = make_url_from_branch(branch);
     if (NULL == url)
     {
         LOG("error making altlinux api url from branch: %d", branch);
         return NULL;
     }
-
-    printbuf* data = make_GET_request(url->buf);
+    printbuf const* const data = make_GET_request(url->buf);
     if (NULL == data)
     {
         LOG("error making get request to url: %s", url->buf);
         goto cleanup__url;
     }
-
-    json_object* response = json_tokener_parse(data->buf);
+    json_object* const response = json_tokener_parse((char const* const)data->buf);
     assert(json_object_is_type(response, json_type_object));
 
-    lh_table* json = json_object_get_object(response);
+    lh_table* const json = json_object_get_object(response);
 
-    json_object* ret =
-        json_object_get(lh_entry_v(lh_table_lookup_entry(json, "packages")));
+    ret = json_object_get(lh_entry_v(lh_table_lookup_entry(json, "packages")));
     assert(json_object_is_type(ret, json_type_array));
 
     // cleanup:
     json_object_put(response);
-    printbuf_free(data);
+
+    // suppress -Wincompatible-pointer-types-discards-qualifiers.
+    // Else how I should deleting constants?
+    printbuf_free((printbuf*)data);
 
 cleanup__url:
-    printbuf_free(url);
+    printbuf_free((printbuf*)url);
 
     return ret;
 }

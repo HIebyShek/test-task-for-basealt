@@ -10,7 +10,8 @@
                 "TTFB_BUILD_TESTS": "ON",
                 "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
                 "CMAKE_BUILD_TYPE": "Debug",
-                "CMAKE_C_FLAGS": "-g -Wall -pedantic -Wextra -Werror"
+                "CMAKE_C_FLAGS": "-g -Wall -pedantic -Wextra -Werror",
+                "CMAKE_C_COMPILER": "clang"
             }
         },
         {
@@ -22,7 +23,8 @@
                 "TTFB_BUILD_TESTS": "ON",
                 "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
                 "CMAKE_BUILD_TYPE": "Release",
-                "CMAKE_C_FLAGS": "-O3"
+                "CMAKE_C_FLAGS": "-O3",
+                "CMAKE_C_COMPILER": "clang"
             }
         }
     ],
