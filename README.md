@@ -17,7 +17,8 @@ The utility supports multiple branches and architectures, as specified in the AP
 - json-c
 - libcurl
 - cmake 3.23 (build dependency)
-- doctest (development dependency)
+- clang or gcc (C99 compiler, build dependency)
+- g++ or clang++ (C++11 compiler, build dependency)
 
 ## Installation
 
@@ -26,13 +27,7 @@ The utility supports multiple branches and architectures, as specified in the AP
 To install the dependencies on Arch Linux, you can use the following command:
 
 ```shell
-sudo pacman -S json-c libcurl cmake
-```
-
-For the development dependency:
-
-```shell
-sudo pacman -S doctest
+sudo pacman -S json-c libcurl cmake clang gcc
 ```
 
 ### ALT Linux
@@ -99,11 +94,21 @@ Follow the steps below to build and run the utility:
    ./build/[debug/release]/ttfb/main -d sisyphus p10
    ```
 
+## Running Tests
+
+To run the tests, you will need the C++11 compiler. You can use either g++ or clang++.
+
+1. Run the tests:
+
+   ```shell
+   ./build/[debug/release]/libttfb/tests/ttfb_tests
+   ```
+
 ## Repository History
 
 The repository contains the complete history of all changes made during the development process, starting from the initial stage. The commit history has not been rewritten and is available for review.
 
-Please note that the utility has been tested and verified on Archlinux. It is expected to work on other Linux distributions as well, provided that the dependencies are installed correctly.
+Please note that the utility has been tested and verified on ALT Рабочая станция К 10.2. It is expected to work on other Linux distributions as well, provided that the dependencies are installed correctly.
 
 ## License
 
