@@ -109,7 +109,3 @@ To run the tests, you will need the C++11 compiler. You can use either g++ or cl
 The repository contains the complete history of all changes made during the development process, starting from the initial stage. The commit history has not been rewritten and is available for review.
 
 Please note that the utility has been tested and verified on ALT Рабочая станция К 10.2. It is expected to work on other Linux distributions as well, provided that the dependencies are installed correctly.
-
-## License
-
-This project is licensed under the [MIT License](LICENSE).
