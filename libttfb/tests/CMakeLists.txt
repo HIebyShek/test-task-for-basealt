@@ -1,11 +1,13 @@
 cmake_minimum_required(VERSION 3.23)
-project(tests)
+project(test_libttfb)
 
 add_executable(
-    tests
+    test_libttfb
     main.test.cpp
     ttfb.test.cpp
+    package.test.cpp
+    version.test.cpp
 )
-target_compile_features(tests PRIVATE cxx_std_11)
-target_link_libraries(tests PRIVATE doctest)
-target_link_libraries(tests PRIVATE ttfb)
+target_compile_features(test_libttfb PRIVATE cxx_std_11)
+target_link_libraries(test_libttfb PRIVATE doctest)
+target_link_libraries(test_libttfb PRIVATE ttfb)

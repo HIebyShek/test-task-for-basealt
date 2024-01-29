@@ -1,7 +1,5 @@
-#include <json_tokener.h>
-#include <json_types.h>
-#include <linkhash.h>
-#include <ttfb/ttfb.h>
+#include <complex.h>
+#include <libttfb/ttfb.h>
 
 #include "macro.h"
 
@@ -9,7 +7,7 @@
 #include <curl/easy.h>
 
 #include <json-c/json_object.h>
-#include <json-c/json_object_iterator.h>
+#include <json-c/json_tokener.h>
 #include <json-c/printbuf.h>
 
 #include <assert.h>
@@ -36,9 +34,32 @@ ttfb_branch_to_cstr(const ttfb_branch branch)
         return "p9";
 
     default:
-        LOG("branch not found");
-        return NULL;
+        assert(0);
     }
+    // suppress warning
+    return NULL;
+}
+
+ttfb_branch
+ttfb_branch_from_cstr(char const* const branch)
+{
+    static char const* const p10 = "p10";
+    static char const* const p9 = "p9";
+    static char const* const sisyphus = "sisyphus";
+    if (0 == strncmp(p10, branch, strlen(p10)))
+    {
+        return TTFB_BRANCH_p10;
+    }
+    else if (0 == strncmp(p9, branch, strlen(p9)))
+    {
+        return TTFB_BRANCH_p9;
+    }
+    else if (0 == strncmp(sisyphus, branch, strlen(sisyphus)))
+    {
+        return TTFB_BRANCH_sisyphus;
+    }
+
+    return TTFB_BRANCH_UNKNOWN;
 }
 
 printbuf*
@@ -137,12 +158,9 @@ ttfb_get_binary_packages(const ttfb_branch branch)
     json_object* const response = json_tokener_parse((char const* const)data->buf);
     assert(json_object_is_type(response, json_type_object));
 
-    lh_table* const json = json_object_get_object(response);
-
-    ret = json_object_get(lh_entry_v(lh_table_lookup_entry(json, "packages")));
+    ret = json_object_get(json_object_object_get(response, "packages"));
     assert(json_object_is_type(ret, json_type_array));
 
-    // cleanup:
     json_object_put(response);
 
     // suppress -Wincompatible-pointer-types-discards-qualifiers.
@@ -155,10 +173,10 @@ cleanup__url:
     return ret;
 }
 
-TTFB_EXPORT json_object*
+json_object*
 ttfb_set_difference(json_object* const lhs,
                     json_object* const rhs,
-                    ttfb_json_object_compare cmp)
+                    ttfb_json_object_compare const cmp)
 {
     assert(lhs);
     assert(rhs);
@@ -166,42 +184,51 @@ ttfb_set_difference(json_object* const lhs,
     assert(json_object_is_type(lhs, json_type_array));
     assert(json_object_is_type(rhs, json_type_array));
 
-    json_object_array_sort(lhs, cmp);
-    json_object_array_sort(rhs, cmp);
+    typedef int (*internal_json_cmp)(void const*, void const*);
+    json_object_array_sort(lhs, (internal_json_cmp)cmp);
+    json_object_array_sort(rhs, (internal_json_cmp)cmp);
 
     size_t ret_max_len = json_object_array_length(lhs);
     json_object* ret = json_object_new_array_ext(ret_max_len);
 
-    struct json_object_iterator lit = json_object_iter_begin(lhs);
-    struct json_object_iterator rit = json_object_iter_begin(rhs);
-    struct json_object_iterator litend = json_object_iter_end(lhs);
-    struct json_object_iterator ritend = json_object_iter_end(rhs);
+    size_t i = 0;
+    size_t j = 0;
+
+    size_t iend = json_object_array_length(lhs);
+    size_t jend = json_object_array_length(rhs);
 
     json_object* lval = NULL;
     json_object* rval = NULL;
-    while (!json_object_iter_equal(&lit, &litend) &&
-           !json_object_iter_equal(&rit, &ritend))
+    while (i < iend && j < jend)
     {
-        lval = json_object_iter_peek_value(&lit);
-        rval = json_object_iter_peek_value(&rit);
-        if (TTFB_COMPARE_RESULT_EQUAL == cmp(lval, rval))
+        lval = json_object_array_get_idx(lhs, i);
+        rval = json_object_array_get_idx(rhs, j);
+
+        if (cmp(&lval, &rval) > 0)
         {
-            json_object_iter_next(&rit);
+            ++j;
+            continue;
+        }
+
+        if (0 == cmp(&lval, &rval))
+        {
+            ++i;
+            ++j;
+            continue;
         }
 
         // may be need to handle error, but it is not documented
-        json_object_array_add(ret, lval);
-        json_object_iter_next(&lit);
-        json_object_iter_next(&rit);
+        json_object_array_add(ret, json_object_get(lval));
+        ++i;
     }
 
-    while (!json_object_iter_equal(&lit, &litend))
+    while (i < iend)
     {
-        lval = json_object_iter_peek_value(&lit);
+        lval = json_object_array_get_idx(lhs, i);
 
         // may be need to handle error, but it is not documented
-        json_object_array_add(ret, lval);
-        json_object_iter_next(&lit);
+        json_object_array_add(ret, json_object_get(lval));
+        ++i;
     }
 
     size_t ret_len = json_object_array_length(ret);
